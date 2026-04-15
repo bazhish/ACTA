@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PROFESSOR
+  COORDINATOR
+  DIRECTOR
+}
+
+enum OccurrenceStatus {
+  REGISTRADA
+  EM_ANALISE
+  RESOLVIDA
+  ENCERRADA
+}
+
+model User {
+  id           String        @id @default(cuid())
+  name         String
+  email        String        @unique
+  passwordHash String
+  role         Role
+  createdAt    DateTime      @default(now())
+  occurrences  Occurrence[]  @relation("OccurrenceCreatedBy")
+  historyLogs  HistoryLog[]  @relation("HistoryPerformedBy")
+}
+
+model Occurrence {
+  id          String           @id @default(cuid())
+  studentName String
+  description String
+  status      OccurrenceStatus @default(REGISTRADA)
+  createdById String
+  createdBy   User             @relation("OccurrenceCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  historyLogs HistoryLog[]
+}
+
+model HistoryLog {
+  id             String            @id @default(cuid())
+  occurrenceId   String
+  occurrence     Occurrence        @relation(fields: [occurrenceId], references: [id])
+  action         String
+  previousStatus OccurrenceStatus?
+  newStatus      OccurrenceStatus
+  performedById  String
+  performedBy    User              @relation("HistoryPerformedBy", fields: [performedById], references: [id])
+  timestamp      DateTime          @default(now())
+
+  @@index([occurrenceId, timestamp])
+}
